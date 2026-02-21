@@ -6,7 +6,12 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
 [![CI](https://github.com/vsromanc/webext-blob-rpc/actions/workflows/ci.yml/badge.svg)](https://github.com/vsromanc/webext-blob-rpc/actions/workflows/ci.yml)
 
-Type-safe RPC for browser extensions with native Blob support. Uses `MessagePort` via a hidden iframe bridge for communication between content scripts and the extension service worker — Blobs, ArrayBuffers, and other structured-cloneable types transfer without serialization.
+Type-safe RPC for browser extensions with native Blob support.
+
+- **Structured clone over `MessagePort`** — Blobs, Files, ArrayBuffers transfer natively, no serialization
+- **Two functions** — `expose()` + `remote()`, auto-detects content script vs service worker
+- **Full TypeScript inference** — `RemoteProxy<T>` gives you typed async methods
+- **Zero runtime dependencies** — just the browser APIs you already have
 
 ## Why not `chrome.runtime.sendMessage`?
 
@@ -107,17 +112,6 @@ try {
 }
 ```
 
-### Cleanup
-
-`expose()` returns a dispose function:
-
-```ts
-const dispose = expose(handlers);
-
-// Later:
-dispose();
-```
-
 ## Setup
 
 ```bash
@@ -146,7 +140,7 @@ Declare them in your `manifest.json`:
 
 ### `expose(handlers): () => void`
 
-Detects the current context (content script or service worker) and sets up transport automatically. Returns a dispose function.
+Detects the current context (content script or service worker) and sets up transport automatically. Returns a dispose function that removes the message listener and closes the port.
 
 - **Content script:** creates a bridge port in the background, then registers handlers on it.
 - **Service worker:** listens for incoming port connections and registers handlers on each.
