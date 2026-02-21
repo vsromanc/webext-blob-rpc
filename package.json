@@ -1,0 +1,58 @@
+{
+  "name": "webext-blob-rpc",
+  "version": "0.1.0",
+  "description": "RPC layer for transferring Blobs between browser extension contexts (background, content scripts, popups)",
+  "author": "Vasyl Romanchak <vasyl.romanchak@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vsromanc/webext-blob-rpc"
+  },
+  "keywords": [
+    "browser-extension",
+    "webextension",
+    "blob",
+    "rpc",
+    "chrome-extension",
+    "messaging"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rimraf dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc",
+    "verify": "npm run typecheck && npm run test && npm run build",
+    "prepublishOnly": "npm run verify"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.6",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.2"
+  },
+  "engines": {
+    "node": "^20.0.0 || >=22.0.0"
+  }
+}
