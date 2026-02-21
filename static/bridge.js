@@ -1,0 +1,1 @@
+(function(){'use strict';var a=new URLSearchParams(location.search).get("secret");window.addEventListener("message",async t=>{let e=t.data;if((e==null?void 0:e.type)!=="webext-blob-rpc:port"||e.secret!==a||!t.ports.length)return;let s=t.ports[0],r=await navigator.serviceWorker.ready;r.active&&r.active.postMessage("port",[s]);},{once:true});})();

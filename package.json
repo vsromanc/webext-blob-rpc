@@ -33,7 +33,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "static"
   ],
   "sideEffects": false,
   "scripts": {
