@@ -8,6 +8,16 @@
 
 Type-safe RPC for browser extensions with native Blob support. Uses `MessagePort` via a hidden iframe bridge for communication between content scripts and the extension service worker — Blobs, ArrayBuffers, and other structured-cloneable types transfer without serialization.
 
+## Why not `chrome.runtime.sendMessage`?
+
+| | `chrome.runtime.sendMessage` | `webext-blob-rpc` |
+|---|---|---|
+| Blob / File transfer | JSON only — must base64-encode | Native structured clone |
+| ArrayBuffer | Must serialize | Native transfer |
+| Type safety | Manual typing | Full `RemoteProxy<T>` inference |
+| Bidirectional | Requires separate listeners | `expose` + `remote` on both sides |
+| Setup | Manual message routing | Two functions, auto-wired |
+
 ## Setup
 
 ```bash
@@ -130,6 +140,24 @@ Service worker overload. Looks up the stored port for the given tab and returns 
 ### `detectContext(): 'service-worker' | 'content-script'`
 
 Returns the detected execution context.
+
+## Example
+
+See [`example/`](./example) for a complete Gmail extension that intercepts file uploads, sends the Blob to the service worker, and counts words in `.txt` attachments.
+
+```bash
+pnpm build:example
+# Load example/dist/ as an unpacked extension in Chrome
+```
+
+## Contributing
+
+Contributions are welcome. Please open an issue first to discuss what you'd like to change.
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b my-feature`)
+3. Run `pnpm verify` before committing
+4. Open a pull request
 
 ## Development
 
