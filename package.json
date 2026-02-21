@@ -1,6 +1,6 @@
 {
   "name": "webext-blob-rpc",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Type-safe RPC for browser extensions with native Blob support via MessagePort",
   "author": "Vasyl Romanchak <vasyl.romanchak@gmail.com>",
   "repository": {
