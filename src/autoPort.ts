@@ -1,6 +1,7 @@
 import { createServiceWorkerPort } from './createServiceWorkerPort';
 import { onPortConnect } from './onPortConnect';
 import { expose as lowLevelExpose } from './expose';
+import { getOffscreenBridgePort } from './connectOffscreen';
 import type { ExposedAPI } from './types';
 
 // ── Content script side ──
@@ -81,6 +82,22 @@ export function initServiceWorker(handlers: ExposedAPI): () => void {
         }
       };
       port.addEventListener('message', onInit);
+
+      // Handle bridge-to-offscreen requests from content scripts
+      const onBridge = (event: MessageEvent) => {
+        if (event.data?.type !== 'webext-blob-rpc:bridge-to-offscreen') return;
+
+        const osPort = getOffscreenBridgePort();
+        if (!osPort) {
+          port.postMessage({ type: 'webext-blob-rpc:bridge-error', reason: 'no offscreen port' });
+          return;
+        }
+
+        const bridge = new MessageChannel();
+        osPort.postMessage({ type: 'webext-blob-rpc:bridge-port' }, [bridge.port2]);
+        port.postMessage({ type: 'webext-blob-rpc:bridge-port' }, [bridge.port1]);
+      };
+      port.addEventListener('message', onBridge);
       // port.start() already called by onPortConnect
     });
   }

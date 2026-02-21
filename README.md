@@ -9,7 +9,7 @@
 Type-safe RPC for browser extensions with native Blob support.
 
 - **Structured clone over `MessagePort`** — Blobs, Files, ArrayBuffers transfer natively, no serialization
-- **Two functions** — `expose()` + `remote()`, auto-detects content script vs service worker
+- **Auto-wired** — `expose()` + `remote()` auto-detect context; `remoteOffscreen()` gives content scripts a direct port to offscreen documents
 - **Full TypeScript inference** — `RemoteProxy<T>` gives you typed async methods
 - **Zero runtime dependencies** — just the browser APIs you already have
 
@@ -100,6 +100,81 @@ const page = remote<ContentAPI>(tabId);
 const screenshot = await page.captureCanvas(); // Blob instance
 ```
 
+### Offscreen document — extracting content from HTML in the background
+
+Offscreen documents can use the DOM but run outside any tab. The service worker creates the document, then uses `connectOffscreen()` to establish a direct `MessagePort` connection (no bridge iframe needed).
+
+#### Shared types
+
+```ts
+type OffscreenAPI = {
+  extractText: (html: string) => string;
+};
+
+type BgAPI = {
+  getSettings: () => { maxLength: number };
+};
+```
+
+#### Service worker
+
+```ts
+import { expose, connectOffscreen } from 'webext-blob-rpc';
+
+// expose() still handles content script connections
+expose<BgAPI>({ getSettings: () => ({ maxLength: 5000 }) });
+
+// Create the offscreen document yourself
+await chrome.offscreen.createDocument({
+  url: 'offscreen.html',
+  reasons: ['DOM_PARSER'],
+  justification: 'Parse HTML content',
+});
+
+// Connect — library only handles the port
+const offscreen = await connectOffscreen<OffscreenAPI>({
+  url: 'offscreen.html',
+  // Optional: expose SW methods back to the offscreen doc
+  handlers: { getSettings: () => ({ maxLength: 5000 }) },
+});
+
+const text = await offscreen.extractText('<h1>Hello</h1>');
+```
+
+#### Offscreen document (`offscreen.html`)
+
+```ts
+import { expose, remote } from 'webext-blob-rpc';
+
+// Auto-detects offscreen context, waits for port from SW
+expose<OffscreenAPI>({
+  extractText(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent ?? '';
+  },
+});
+
+// Call SW methods on the same port (if SW provided handlers)
+const bg = remote<BgAPI>();
+const { maxLength } = await bg.getSettings();
+```
+
+#### Content script → offscreen (direct, via port brokering)
+
+`remoteOffscreen()` gives content scripts a direct `MessagePort` to the offscreen document. The service worker brokers the port once, then steps out of the way — no relay overhead per call.
+
+```ts
+// --- content script ---
+import { remoteOffscreen } from 'webext-blob-rpc';
+
+const offscreen = remoteOffscreen<OffscreenAPI>();
+const text = await offscreen.extractText('<h1>Hello</h1>');
+```
+
+No changes are needed in the service worker or offscreen document — `connectOffscreen()` and `expose()` already handle brokering transparently.
+
+> **Note:** The service worker must have called `connectOffscreen()` before the content script calls `remoteOffscreen()`, so the offscreen port is available for brokering.
+
 ### Error propagation
 
 Errors thrown in handlers propagate to the caller:
@@ -140,22 +215,43 @@ Declare them in your `manifest.json`:
 
 ### `expose(handlers): () => void`
 
-Detects the current context (content script or service worker) and sets up transport automatically. Returns a dispose function that removes the message listener and closes the port.
+Detects the current context and sets up transport automatically. Returns a dispose function that removes the message listener and closes the port.
 
 - **Content script:** creates a bridge port in the background, then registers handlers on it.
 - **Service worker:** listens for incoming port connections and registers handlers on each.
+- **Offscreen / extension page:** waits for a `MessagePort` from the service worker (sent via `connectOffscreen`), then registers handlers on it.
 
 ### `remote<T>(): RemoteProxy<T>`
 
-Content script overload. Returns a proxy where each method call awaits the shared port before sending the RPC request.
+Content script or offscreen document overload. Returns a proxy where each method call awaits the shared port before sending the RPC request.
 
 ### `remote<T>(tabId: number): RemoteProxy<T>`
 
 Service worker overload. Looks up the stored port for the given tab and returns a typed proxy.
 
-### `detectContext(): 'service-worker' | 'content-script'`
+### `remoteOffscreen<T>(options?): RemoteProxy<T>`
 
-Returns the detected execution context.
+Content script only. Returns a lazy proxy that, on first method call, requests a brokered `MessagePort` from the service worker directly to the offscreen document. After brokering, RPC flows directly between the content script and offscreen document without service worker relay.
+
+The service worker must have called `connectOffscreen()` before the content script uses `remoteOffscreen()`.
+
+Options:
+- `timeout` — ms to wait for each RPC call (default: `30000`).
+
+### `connectOffscreen<T>(options): Promise<RemoteProxy<T>>`
+
+Service worker only. Connects to an existing offscreen document (or any extension page) via `MessagePort`. The user must create the offscreen document before calling this function.
+
+Options:
+- `url` — path to the offscreen HTML file (e.g. `'offscreen.html'`). Used with `chrome.runtime.getURL()` to find the client.
+- `handlers` — optional object of SW methods to expose on the same port, enabling bidirectional RPC.
+- `timeout` — ms to wait for ack from the offscreen document (default: `10000`).
+
+Connections are cached by URL. Subsequent calls with the same `url` return the same proxy.
+
+### `detectContext(): 'service-worker' | 'content-script' | 'offscreen'`
+
+Returns the detected execution context. Extension pages (`chrome-extension://` protocol with `document` present) return `'offscreen'`.
 
 ## Example
 
