@@ -45,7 +45,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc",
     "verify": "npm run typecheck && npm run test && npm run build",
-    "prepublishOnly": "npm run verify"
+    "prepublishOnly": "npm run verify",
+    "build:example": "esbuild example/background.js example/content.js --bundle --outdir=example/dist --format=iife && cp static/bridge.html static/bridge.js example/manifest.json example/dist/"
   },
   "devDependencies": {
     "rimraf": "^6.0.1",

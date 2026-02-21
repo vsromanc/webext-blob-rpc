@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Blob RPC Example – Attachment Word Counter",
+  "version": "1.0",
+  "description": "Counts words in .txt attachments on Gmail",
+  "permissions": [],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["bridge.html", "bridge.js"],
+      "matches": ["https://mail.google.com/*"]
+    }
+  ]
+}

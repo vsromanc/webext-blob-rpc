@@ -63,7 +63,10 @@ export function initServiceWorker(handlers: ExposedAPI): () => void {
 
     // Accept incoming ports from content scripts
     swDisposeOnPortConnect = onPortConnect((port) => {
-      // Wait for the init message with nonce before exposing handlers
+      // Expose handlers immediately — don't wait for tabId correlation
+      lowLevelExpose(handlers, port);
+
+      // Correlate tabId asynchronously (needed for remote(tabId) lookups)
       const onInit = (event: MessageEvent) => {
         const data = event.data;
         if (data?.type === 'webext-blob-rpc:init' && typeof data.nonce === 'string') {
@@ -74,9 +77,6 @@ export function initServiceWorker(handlers: ExposedAPI): () => void {
 
           if (tabId != null) {
             portsByTabId.set(tabId, port);
-            lowLevelExpose(handlers, port, {
-              onDisconnect: () => portsByTabId.delete(tabId),
-            });
           }
         }
       };
