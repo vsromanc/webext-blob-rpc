@@ -18,6 +18,106 @@ Type-safe RPC for browser extensions with native Blob support. Uses `MessagePort
 | Bidirectional | Requires separate listeners | `expose` + `remote` on both sides |
 | Setup | Manual message routing | Two functions, auto-wired |
 
+## Usage
+
+### Content script — capture and send a file to background
+
+```ts
+import { expose, remote } from 'webext-blob-rpc';
+
+// Types shared between content script and service worker
+type BgAPI = {
+  uploadFile: (file: File) => { hash: string; size: number };
+  processImage: (bitmap: ImageBitmap) => ArrayBuffer;
+};
+
+type ContentAPI = {
+  captureCanvas: () => Blob;
+};
+
+// Expose methods the service worker can call
+expose<ContentAPI>({
+  captureCanvas: () => {
+    const canvas = document.querySelector('canvas')!;
+    return new Promise<Blob>((resolve) => canvas.toBlob(resolve!));
+  },
+});
+
+// Call service worker methods — Blobs and Files transfer natively
+const bg = remote<BgAPI>();
+
+document.querySelector('input[type=file]')!.addEventListener('change', async (e) => {
+  const file = (e.target as HTMLInputElement).files![0];
+
+  // File sent over MessagePort via structured clone — no base64, no chunking
+  const { hash, size } = await bg.uploadFile(file);
+  console.log(`Uploaded ${file.name}: ${hash} (${size} bytes)`);
+});
+```
+
+### Service worker — receive and process binary data
+
+```ts
+import { expose, remote } from 'webext-blob-rpc';
+
+type BgAPI = {
+  uploadFile: (file: File) => { hash: string; size: number };
+  processImage: (bitmap: ImageBitmap) => ArrayBuffer;
+};
+
+type ContentAPI = {
+  captureCanvas: () => Blob;
+};
+
+expose<BgAPI>({
+  async uploadFile(file) {
+    // file is a real File object — read it directly
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hash = [...new Uint8Array(hashBuffer)]
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+    return { hash, size: file.size };
+  },
+
+  async processImage(bitmap) {
+    // ImageBitmap transfers natively too
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(bitmap, 0, 0);
+    const blob = await canvas.convertToBlob({ type: 'image/webp' });
+    return blob.arrayBuffer();
+  },
+});
+
+// Call content script methods by tab ID
+const page = remote<ContentAPI>(tabId);
+const screenshot = await page.captureCanvas(); // Blob instance
+```
+
+### Error propagation
+
+Errors thrown in handlers propagate to the caller:
+
+```ts
+try {
+  await bg.uploadFile(file);
+} catch (e) {
+  // Error from service worker surfaces here
+}
+```
+
+### Cleanup
+
+`expose()` returns a dispose function:
+
+```ts
+const dispose = expose(handlers);
+
+// Later:
+dispose();
+```
+
 ## Setup
 
 ```bash
@@ -40,84 +140,6 @@ Declare them in your `manifest.json`:
     "matches": ["<all_urls>"]
   }]
 }
-```
-
-## Usage
-
-Define your API types once in a shared file, then import them on both sides:
-
-```ts
-// rpc.types.ts
-export type BgAPI = {
-  fetchData: (url: string) => any;
-};
-
-export type ContentAPI = {
-  getPageTitle: () => string;
-  getSelection: () => string | undefined;
-};
-```
-
-### Content script
-
-```ts
-import { expose, remote } from 'webext-blob-rpc';
-import type { BgAPI, ContentAPI } from './rpc.types';
-
-expose<ContentAPI>({
-  getPageTitle: () => document.title,
-  getSelection: () => window.getSelection()?.toString(),
-});
-
-const bg = remote<BgAPI>();
-const data = await bg.fetchData('/api/user');
-```
-
-### Service worker (background)
-
-```ts
-import { expose, remote } from 'webext-blob-rpc';
-import type { BgAPI, ContentAPI } from './rpc.types';
-
-expose<BgAPI>({
-  fetchData: (url: string) => fetch(url).then(r => r.json()),
-});
-
-const page = remote<ContentAPI>(tabId);
-const title = await page.getPageTitle();
-```
-
-### Error propagation
-
-Errors thrown in handlers propagate to the caller:
-
-```ts
-// background
-try {
-  await page.riskyOp();
-} catch (e) {
-  // Error: failed
-}
-```
-
-### Blob transfer
-
-Blobs transfer natively over `MessagePort` — no base64 encoding or manual chunking:
-
-```ts
-// background
-const blob = await page.captureCanvas(); // Blob instance
-```
-
-### Cleanup
-
-`expose()` returns a dispose function:
-
-```ts
-const dispose = expose(handlers);
-
-// Later:
-dispose();
 ```
 
 ## API
