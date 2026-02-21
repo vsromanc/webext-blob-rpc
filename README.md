@@ -1,5 +1,11 @@
 # webext-blob-rpc
 
+[![npm version](https://img.shields.io/npm/v/webext-blob-rpc)](https://www.npmjs.com/package/webext-blob-rpc)
+[![npm bundle size](https://img.shields.io/bundlephobia/minzip/webext-blob-rpc)](https://bundlephobia.com/package/webext-blob-rpc)
+[![license](https://img.shields.io/npm/l/webext-blob-rpc)](./LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
+[![CI](https://github.com/vsromanc/webext-blob-rpc/actions/workflows/ci.yml/badge.svg)](https://github.com/vsromanc/webext-blob-rpc/actions/workflows/ci.yml)
+
 Type-safe RPC for browser extensions with native Blob support. Uses `MessagePort` via a hidden iframe bridge for communication between content scripts and the extension service worker — Blobs, ArrayBuffers, and other structured-cloneable types transfer without serialization.
 
 ## Setup
