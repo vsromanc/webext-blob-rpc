@@ -1,6 +1,6 @@
 {
   "name": "webext-blob-rpc",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Type-safe RPC for browser extensions with native Blob support via MessagePort",
   "author": "Vasyl Romanchak <vasyl.romanchak@gmail.com>",
   "repository": {
@@ -10,10 +10,19 @@
   "keywords": [
     "browser-extension",
     "webextension",
-    "blob",
-    "rpc",
     "chrome-extension",
-    "messaging"
+    "manifest-v3",
+    "mv3",
+    "rpc",
+    "messaging",
+    "messageport",
+    "blob",
+    "blob-transfer",
+    "structured-clone",
+    "content-script",
+    "service-worker",
+    "type-safe",
+    "typescript"
   ],
   "license": "MIT",
   "type": "module",
@@ -55,7 +64,9 @@
     "vitest": "^3.0.2"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "engines": {
     "node": "^20.0.0 || >=22.0.0"
