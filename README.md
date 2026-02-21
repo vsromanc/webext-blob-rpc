@@ -5,7 +5,7 @@ Type-safe RPC for browser extensions with native Blob support. Uses `MessagePort
 ## Setup
 
 ```bash
-npm install webext-blob-rpc
+pnpm add webext-blob-rpc
 ```
 
 Copy the pre-built bridge files from `node_modules/webext-blob-rpc/static/` into your extension (e.g. at the root):
@@ -128,12 +128,12 @@ Returns the detected execution context.
 ## Development
 
 ```bash
-npm install
-npm run dev        # Watch mode
-npm test           # Run tests
-npm run build      # Production build
-npm run typecheck  # Type checking
-npm run verify     # Typecheck + test + build
+pnpm install
+pnpm dev           # Watch mode
+pnpm test          # Run tests
+pnpm build         # Production build
+pnpm typecheck     # Type checking
+pnpm verify        # Typecheck + test + build
 ```
 
 ## License

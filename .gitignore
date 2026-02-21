@@ -91,6 +91,8 @@ out
 .nuxt
 dist
 
+package-lock.json
+
 # Build outputs
 static/
 example/dist/
